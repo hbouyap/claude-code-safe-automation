@@ -12,6 +12,8 @@ actually pay for when they adopt agentic coding:
 Everything here is generic and safe to run. Clone it, point Claude Code at it, and watch the
 guardrail refuse a `rm -rf` while letting normal work through.
 
+![The guardrail blocking destructive commands on both Unix and Windows while allowing safe ones](docs/guardrail-demo.png)
+
 ---
 
 ## Why this exists
@@ -22,7 +24,7 @@ and proving the output is safe. This repo is a compact demonstration of that dis
 
 ## Layout
 
-```
+```text
 .claude/
   settings.json          # scoped permissions + hook registration
   hooks/guard.py         # PreToolUse guardrail (blocks dangerous commands)
