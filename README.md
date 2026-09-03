@@ -67,6 +67,12 @@ the top of the file is the single place to edit.
 
 ---
 
+## Going further
+
+This repo is the minimal, free reference. A more complete **MCP & Guardrails Kit** adds a
+fail-closed allow-list mode, an audit log, three MCP server templates (HTTP API + read-only
+SQLite included), extra subagents, and a one-command installer — see the link on my profile.
+
 ## Author
 
 **Harry Philippe Mbouyap** — Claude Code & AI automation specialist (MCP servers, subagents,

@@ -13,16 +13,29 @@ import re
 import sys
 
 # Patterns that should never run unattended. Each is (regex, human reason).
+# Matched case-insensitively, so they cover -rf / -Rf and PowerShell casing alike, on
+# both Unix and Windows shells.
 DANGEROUS = [
-    (r"\brm\s+-[a-z]*r[a-z]*f|\brm\s+-[a-z]*f[a-z]*r", "recursive force delete (rm -rf)"),
-    (r"\bgit\s+push\b.*(--force|-f)\b", "force push can overwrite remote history"),
+    # Recursive force delete in any flag order (rm -rf, -fr, -R -f, --recursive --force,
+    # and the PowerShell `rm -Recurse -Force` alias).
+    (r"\brm\b(?=.*(?:-[a-z]*r|--recursive))(?=.*(?:-[a-z]*f|--force))",
+     "recursive force delete (rm -rf / --recursive --force)"),
+    (r"\bremove-item\b(?=.*-rec)(?=.*-for)",
+     "recursive force delete (Remove-Item -Recurse -Force)"),
+    (r"\b(?:del|erase)\b(?=.*/s)", "recursive delete (del /s)"),
+    (r"\b(?:rd|rmdir)\b(?=.*/s)", "recursive directory delete (rmdir /s)"),
+    (r"\bformat\b\s+[a-z]:", "disk format"),
+    (r"\bshred\b", "secure file wipe (shred)"),
+    (r"\bgit\s+push\b(?=.*(?:--force\b|--force-with-lease\b|\s-f\b))",
+     "force push can overwrite remote history"),
     (r"\bgit\s+reset\s+--hard\b", "hard reset discards uncommitted work"),
+    (r"\bgit\s+clean\b(?=.*-[a-z]*f)", "git clean permanently deletes untracked files"),
     (r":\(\)\s*\{\s*:\|:&\s*\};:", "fork bomb"),
     (r"\bmkfs\.|\bdd\s+if=.*of=/dev/", "raw disk / filesystem write"),
     (r"\bchmod\s+-R\s+0?777\b", "world-writable recursive chmod"),
     (r">\s*/dev/sd[a-z]", "writing directly to a block device"),
-    (r"\bcurl\b.*\|\s*(sudo\s+)?(sh|bash)\b", "pipe-to-shell from the network"),
-    (r"\bwget\b.*\|\s*(sudo\s+)?(sh|bash)\b", "pipe-to-shell from the network"),
+    (r"\b(?:curl|wget)\b.*\|\s*(?:sudo\s+)?(?:sh|bash)\b", "pipe-to-shell from the network"),
+    (r"(?:^|\s)(?:sudo|doas)\s", "privilege escalation (sudo/doas) is not permitted"),
 ]
 
 
@@ -39,7 +52,7 @@ def main() -> int:
 
     command = event.get("tool_input", {}).get("command", "")
     for pattern, reason in DANGEROUS:
-        if re.search(pattern, command):
+        if re.search(pattern, command, re.IGNORECASE):
             print(f"guard: blocked -- {reason}\n  command: {command}", file=sys.stderr)
             return 2
 

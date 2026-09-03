@@ -15,10 +15,13 @@ Requires: pip install "mcp>=1.0"
 import json
 from pathlib import Path
 
-from mcp.server.fastmcp import FastMCP
+try:  # mcp >= 2.x renamed FastMCP -> MCPServer
+    from mcp.server.mcpserver import MCPServer as _Server
+except ImportError:  # mcp 1.x
+    from mcp.server.fastmcp import FastMCP as _Server
 
 STORE = Path(__file__).with_name("notes.json")
-mcp = FastMCP("notes")
+mcp = _Server("notes")
 
 
 def _load() -> list[dict]:
