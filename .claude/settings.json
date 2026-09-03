@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Read(*)",
+      "Grep(*)",
+      "Glob(*)"
+    ],
+    "deny": [
+      "Bash(sudo:*)",
+      "Read(.env)",
+      "Read(**/secrets/**)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .claude/hooks/guard.py"
+          }
+        ]
+      }
+    ]
+  }
+}
