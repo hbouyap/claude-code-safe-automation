@@ -1,7 +1,7 @@
 # Claude Code — Safe Automation Starter
 
 A small, production-minded reference showing how to give **Claude Code** real autonomy on a
-workflow *without* letting it do something dangerous. It bundles the three pieces clients
+workflow *without* letting it do something dangerous. It bundles the core pieces clients
 actually pay for when they adopt agentic coding:
 
 1. **A guardrail hook** — a `PreToolUse` gate that blocks destructive shell commands before they run.
@@ -71,10 +71,19 @@ the top of the file is the single place to edit.
 
 ## Going further
 
-This repo is the minimal, free reference. A more complete **MCP & Guardrails Kit** adds a
-fail-closed allow-list mode, an audit log, three MCP server templates (HTTP API + read-only
-SQLite included), extra subagents, and a one-command installer:
-**https://hmbouyap.gumroad.com/l/vkqza**
+This repo is the minimal, free reference. If you want the production-ready, done-for-you
+version, the **MCP & Guardrails Kit** picks up where this leaves off:
+
+| | This repo (free, MIT) | MCP & Guardrails Kit |
+|---|:---:|:---:|
+| PreToolUse guardrail hook | ✅ deny-list | ✅ deny-list **+ fail-closed allow-list** |
+| Audit log of every decision | — | ✅ |
+| MCP server templates | 1 (notes) | 3 (notes, HTTP API, read-only SQLite) |
+| Subagents | 1 (code-reviewer) | 3 (+ test-writer, release-notes) |
+| One-command installer | — | ✅ `setup.py` (idempotent) |
+| Quickstart + docs | basic | ✅ full |
+
+**→ Get the kit: https://hmbouyap.gumroad.com/l/vkqza**
 
 ## Author
 
