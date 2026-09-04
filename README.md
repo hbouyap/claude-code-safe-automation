@@ -67,6 +67,14 @@ a database read) and you have a custom capability the agent can call. See [mcp/R
 per project (only these commands, only these paths) and log every decision. The pattern list at
 the top of the file is the single place to edit.
 
+A deny-list over the raw command string also has a structural limit: it's fighting shell
+composition it can't fully see (quote-splitting, encoded payloads piped to a shell). That's the
+strongest argument for the allow-list flip above once you're running unattended.
+
+`guard.py` also hooks `Write`/`Edit`, not just `Bash` — a write to `~/.bashrc` or
+`.git/hooks/pre-push` isn't a shell command, but it executes later with nobody watching. See
+`SENSITIVE_PATHS` in the file.
+
 ---
 
 ## Going further

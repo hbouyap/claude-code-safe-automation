@@ -1,12 +1,24 @@
 #!/usr/bin/env python3
 """PreToolUse guardrail for Claude Code.
 
-Reads a tool-call event as JSON on stdin. If the call is a shell command that
-matches a dangerous pattern, it exits 2 (which Claude Code treats as "deny" and
-surfaces the stderr message to the model). Otherwise it exits 0 (allow).
+Reads a tool-call event as JSON on stdin. If the call is dangerous, it exits 2
+(which Claude Code treats as "deny" and surfaces the stderr message to the
+model). Otherwise it exits 0 (allow). Covers two tool families:
 
-This is a deny-list for demonstration. In production, invert it to a per-project
-allow-list and log every decision to an append-only file.
+- Bash: a deny-list of destructive shell commands (see DANGEROUS below).
+- Write / Edit: a deny-list of paths that execute later with nobody watching
+  (shell rc files, git hooks, ssh config, system directories) even though the
+  write itself isn't a shell command.
+
+A regex over a raw command string can't see everything a model can compose
+(quote-splitting, encoded payloads piped to a shell, etc.) — for unattended or
+adversarial contexts, flip guard.py's shell check to a fail-closed allow-list
+instead of extending this deny-list forever. This file stays a deny-list
+because it's meant to be read end-to-end as a demo, not to be the last word in
+production.
+
+This is a deny-list for demonstration. In production, invert the Bash check to
+a per-project allow-list and log every decision to an append-only file.
 """
 import json
 import re
@@ -38,6 +50,22 @@ DANGEROUS = [
     (r"(?:^|\s)(?:sudo|doas)\s", "privilege escalation (sudo/doas) is not permitted"),
 ]
 
+# Paths that execute or grant access later, with nobody watching the moment they're
+# written. A Bash-only guardrail misses these entirely: nothing here is a shell
+# command, but a shell rc file runs on the next login, a git hook runs on the next
+# commit/push, and an ssh/credentials file grants access the moment it's read.
+# Matched against tool_input.file_path regardless of how it's spelled (relative,
+# absolute, forward or back slashes).
+SENSITIVE_PATHS = [
+    (r"(^|[/\\])\.(bashrc|zshrc|bash_profile|profile)$", "shell startup file (runs on next login)"),
+    (r"(^|[/\\])\.git[/\\]hooks[/\\]", "git hook (runs on the next commit/push)"),
+    (r"(^|[/\\])\.ssh[/\\]", "SSH config/keys directory"),
+    (r"(^|[/\\])\.aws[/\\]credentials$", "cloud credentials file"),
+    (r"(^|[/\\])crontab$|(^|[/\\])etc[/\\]cron", "scheduled-task definition"),
+    (r"^(/etc[/\\]|[a-zA-Z]:\\Windows\\System32)", "system directory"),
+    (r"WindowsPowerShell[/\\].*profile\.ps1$", "PowerShell profile (runs on next shell start)"),
+]
+
 
 def main() -> int:
     try:
@@ -47,16 +75,26 @@ def main() -> int:
         print("guard: could not parse tool event; denying by default", file=sys.stderr)
         return 2
 
-    if event.get("tool_name") != "Bash":
-        return 0  # only gate shell commands here
+    tool = event.get("tool_name")
+    tool_input = event.get("tool_input", {})
 
-    command = event.get("tool_input", {}).get("command", "")
-    for pattern, reason in DANGEROUS:
-        if re.search(pattern, command, re.IGNORECASE):
-            print(f"guard: blocked -- {reason}\n  command: {command}", file=sys.stderr)
-            return 2
+    if tool == "Bash":
+        command = tool_input.get("command", "")
+        for pattern, reason in DANGEROUS:
+            if re.search(pattern, command, re.IGNORECASE):
+                print(f"guard: blocked -- {reason}\n  command: {command}", file=sys.stderr)
+                return 2
+        return 0
 
-    return 0
+    if tool in ("Write", "Edit"):
+        path = tool_input.get("file_path", "")
+        for pattern, reason in SENSITIVE_PATHS:
+            if re.search(pattern, path, re.IGNORECASE):
+                print(f"guard: blocked -- {reason}\n  path: {path}", file=sys.stderr)
+                return 2
+        return 0
+
+    return 0  # every other tool is out of scope for this guardrail
 
 
 if __name__ == "__main__":

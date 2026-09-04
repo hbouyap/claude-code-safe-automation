@@ -25,6 +25,15 @@
             "command": "python .claude/hooks/guard.py"
           }
         ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .claude/hooks/guard.py"
+          }
+        ]
       }
     ]
   }
